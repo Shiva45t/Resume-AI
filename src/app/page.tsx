@@ -1,7 +1,15 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
 import { Sparkles, FileText, Target, Zap, ArrowRight, ShieldCheck } from "lucide-react";
 
-export default function HomePage() {
+export default async function HomePage() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (user) {
+    redirect("/dashboard");
+  }
   return (
     <div className="py-8 space-y-16">
       {/* Hero Section */}
