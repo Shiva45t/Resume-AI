@@ -37,7 +37,11 @@ export default function SignupPage() {
     });
 
     if (authError) {
-      setError(authError.message);
+      if (authError.message === "Failed to fetch") {
+        setError("Unable to connect to authentication server. If this site is deployed live, make sure NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY are set in your deployment provider (e.g. Vercel) environment variables.");
+      } else {
+        setError(authError.message);
+      }
       setLoading(false);
       return;
     }

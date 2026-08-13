@@ -49,11 +49,21 @@ export const ResumeAnalysisSchema = z.object({
 
 export type ResumeAnalysis = z.infer<typeof ResumeAnalysisSchema>;
 
+export const RecommendedProjectSchema = z.object({
+  repo_name: z.string(),
+  repo_url: z.string().optional().default(""),
+  relevance_explanation: z.string(),
+  suggested_bullet_point: z.string(),
+});
+
+export type RecommendedProject = z.infer<typeof RecommendedProjectSchema>;
+
 export const JDMatchSchema = z.object({
   match_score: z.number().int().min(0).max(100),
   missing_keywords: z.array(z.string()),
   matching_strengths: z.array(z.string()).optional().default([]),
   interview_questions: z.array(z.string()),
+  recommended_projects: z.array(RecommendedProjectSchema).optional().default([]),
 });
 
 export type JDMatch = z.infer<typeof JDMatchSchema>;
@@ -98,6 +108,26 @@ export interface AnalysisRecord {
   jd_matches?: JDMatchRecord[];
 }
 
+export interface ProfileRecord {
+  id: string;
+  github_username?: string;
+  github_access_token?: string;
+  updated_at?: string;
+}
+
+export interface GitHubProjectRecord {
+  id: string;
+  user_id: string;
+  repo_name: string;
+  repo_url: string;
+  description?: string;
+  readme_summary?: string;
+  tech_stack: string[];
+  stars: number;
+  is_featured: boolean;
+  last_synced_at: string;
+}
+
 export interface JDMatchRecord {
   id: string;
   analysis_id: string;
@@ -106,5 +136,6 @@ export interface JDMatchRecord {
   missing_keywords: string[];
   matching_strengths: string[];
   interview_questions: string[];
+  recommended_projects?: RecommendedProject[];
   created_at: string;
 }

@@ -5,6 +5,7 @@ import ScoreGauge from "@/components/ScoreGauge";
 import AnalysisResultCard from "@/components/AnalysisResultCard";
 import RoleSuggestionCard from "@/components/RoleSuggestionCard";
 import InterviewQuestionList from "@/components/InterviewQuestionList";
+import RecommendedProjectsCard from "@/components/RecommendedProjectsCard";
 import { ArrowLeft, FileText, Calendar, Target, CheckCircle2, AlertCircle } from "lucide-react";
 import { ResumeAnalysis } from "@/lib/types";
 
@@ -220,6 +221,11 @@ export default async function AnalysisDetailsPage({ params }: PageProps) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Recommended GitHub Projects for Target JD */}
+      {primaryJdMatch && (
+        <RecommendedProjectsCard projects={primaryJdMatch.recommended_projects || []} />
       )}
 
       {/* Tailored Interview Questions & AI Practice Simulator */}

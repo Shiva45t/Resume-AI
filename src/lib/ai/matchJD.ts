@@ -1,18 +1,39 @@
 import Groq from "groq-sdk";
 import { JDMatch, JDMatchSchema } from "@/lib/types";
 
-const SYSTEM_PROMPT = `You are an expert technical recruiter and interview coach. You will be given a candidate's resume text and a job description. Respond ONLY with valid JSON, no preamble, no markdown fences. Use this exact schema:
+export interface GitHubProjectContext {
+  repo_name: string;
+  repo_url: string;
+  description?: string;
+  readme_summary?: string;
+  tech_stack: string[];
+  stars: number;
+}
+
+const SYSTEM_PROMPT = `You are an expert technical recruiter and interview coach. You will be given a candidate's resume text, a job description, and optionally a list of the candidate's featured GitHub projects. Respond ONLY with valid JSON, no preamble, no markdown fences. Use this exact schema:
 
 {
   "match_score": <integer 0-100>,
   "missing_keywords": [<string>, ...],
   "matching_strengths": [<string>, ...],
-  "interview_questions": [<string>, ... 8 to 10 items]
+  "interview_questions": [<string>, ... 8 to 10 items],
+  "recommended_projects": [
+    {
+      "repo_name": "<string, exact repository name>",
+      "repo_url": "<string, repository URL>",
+      "relevance_explanation": "<string, 1 sentence explaining why this GitHub project directly demonstrates key requirements in the JD>",
+      "suggested_bullet_point": "<string, a high-impact STAR-format resume bullet point tailored to the JD's keywords describing this project>"
+    }
+  ]
 }
 
-interview_questions should be a realistic mix: some behavioral, some technical based on the JD's required skills, and 1-2 that probe gaps between the resume and JD. Base everything strictly on the provided resume and JD text.`;
+If featured GitHub projects are provided in the user prompt, select 2 to 3 projects that best align with the Job Description requirements and populate recommended_projects. If no projects are provided or none fit, return an empty array [] for recommended_projects. Base everything strictly on the provided resume, JD text, and GitHub project context.`;
 
-export async function matchJD(rawResumeText: string, jdText: string): Promise<JDMatch> {
+export async function matchJD(
+  rawResumeText: string,
+  jdText: string,
+  githubProjects: GitHubProjectContext[] = []
+): Promise<JDMatch> {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
     throw new Error("GROQ_API_KEY environment variable is not configured.");
@@ -20,7 +41,19 @@ export async function matchJD(rawResumeText: string, jdText: string): Promise<JD
 
   const groq = new Groq({ apiKey });
 
-  const userPrompt = `CANDIDATE RESUME TEXT:\n${rawResumeText}\n\nJOB DESCRIPTION:\n${jdText}`;
+  let userPrompt = `CANDIDATE RESUME TEXT:\n${rawResumeText}\n\nJOB DESCRIPTION:\n${jdText}`;
+
+  if (githubProjects && githubProjects.length > 0) {
+    const formattedProjects = githubProjects
+      .map(
+        (p) =>
+          `- Repo: ${p.repo_name} (${p.repo_url})\n  Stars: ${p.stars}\n  Tech Stack: ${
+            p.tech_stack?.join(", ") || "General"
+          }\n  Summary: ${p.readme_summary || p.description || "N/A"}`
+      )
+      .join("\n\n");
+    userPrompt += `\n\nCANDIDATE FEATURED GITHUB PROJECTS:\n${formattedProjects}`;
+  }
 
   let rawContent = "";
   try {
@@ -32,7 +65,7 @@ export async function matchJD(rawResumeText: string, jdText: string): Promise<JD
       ],
       response_format: { type: "json_object" },
       temperature: 0.2,
-      max_completion_tokens: 1500,
+      max_completion_tokens: 1800,
     });
 
     rawContent = response.choices[0]?.message?.content || "";
@@ -46,7 +79,7 @@ export async function matchJD(rawResumeText: string, jdText: string): Promise<JD
         ],
         response_format: { type: "json_object" },
         temperature: 0.2,
-        max_completion_tokens: 1500,
+        max_completion_tokens: 1800,
       });
       rawContent = response.choices[0]?.message?.content || "";
     } catch (fallbackErr) {

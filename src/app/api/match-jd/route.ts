@@ -41,8 +41,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Call Anthropic Claude API for JD Matching & Interview Prep
-    const matchData = await matchJD(rawResumeText, jd_text);
+    // Fetch user's featured GitHub projects
+    const { data: githubProjects } = await supabase
+      .from("github_projects")
+      .select("repo_name, repo_url, description, readme_summary, tech_stack, stars")
+      .eq("user_id", user.id)
+      .eq("is_featured", true);
+
+    // Call Groq AI for JD Matching, Interview Prep, & GitHub Recommendations
+    const matchData = await matchJD(rawResumeText, jd_text, githubProjects || []);
 
     // Save record to jd_matches table
     const { data: matchRecord, error: dbError } = await supabase
@@ -54,6 +61,7 @@ export async function POST(req: NextRequest) {
         missing_keywords: matchData.missing_keywords,
         matching_strengths: matchData.matching_strengths || [],
         interview_questions: matchData.interview_questions,
+        recommended_projects: matchData.recommended_projects || [],
       })
       .select()
       .single();
